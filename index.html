@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Leo Benzer">
+  <meta name="theme-color" content="#0a0a0a">
+  <title>Leo Benzer · Virelune Labs</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      background: #0a0a0a;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .card {
+      width: 100%;
+      max-width: 390px;
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      background: linear-gradient(160deg, #111108 0%, #0a0a0a 40%, #0d0d08 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 60px 28px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ambient glow */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      height: 300px;
+      background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .card::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      right: -60px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(201,168,76,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Logo */
+    .logo-wrap {
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .logo-ring {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.03));
+      border: 1px solid rgba(201,168,76,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 30px rgba(201,168,76,0.08), inset 0 1px 0 rgba(255,255,255,0.05);
+    }
+
+    /* Name */
+    .name {
+      font-size: 32px;
+      font-weight: 700;
+      color: #f0e8d0;
+      letter-spacing: -0.02em;
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    /* Title */
+    .title {
+      font-size: 11px;
+      font-weight: 600;
+      color: #c9a84c;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 6px;
+    }
+    .company {
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(240,232,208,0.5);
+      letter-spacing: 0.08em;
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    /* Divider */
+    .divider {
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(201,168,76,0.3), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* Action buttons */
+    .actions {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+
+    .btn {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 16px 20px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      -webkit-user-select: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(201,168,76,0.06), transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .btn:active::before { opacity: 1; }
+    .btn:active { transform: scale(0.98); border-color: rgba(201,168,76,0.3); }
+
+    .btn-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .btn-icon.green  { background: rgba(52,199,89,0.15); }
+    .btn-icon.gold   { background: rgba(201,168,76,0.15); }
+    .btn-icon.blue   { background: rgba(10,132,255,0.15); }
+    .btn-icon.purple { background: rgba(175,82,222,0.15); }
+
+    .btn-text { flex: 1; }
+    .btn-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(240,232,208,0.4);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+    .btn-value {
+      font-size: 16px;
+      font-weight: 500;
+      color: #f0e8d0;
+      letter-spacing: -0.01em;
+    }
+    .btn-arrow {
+      color: rgba(240,232,208,0.2);
+      font-size: 14px;
+    }
+
+    /* Save contact button */
+    .save-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #c9a84c, #a07828);
+      border: none;
+      border-radius: 16px;
+      padding: 18px;
+      font-size: 17px;
+      font-weight: 600;
+      color: #0a0a0a;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+      transition: all 0.2s;
+      box-shadow: 0 4px 20px rgba(201,168,76,0.25);
+    }
+    .save-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+    /* QR section */
+    .qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .qr-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(240,232,208,0.3);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+    #qrcode {
+      background: white;
+      padding: 10px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+    #qrcode img, #qrcode canvas {
+      border-radius: 6px;
+      display: block;
+    }
+
+    /* Legal */
+    .legal {
+      font-size: 9px;
+      color: rgba(240,232,208,0.2);
+      text-align: center;
+      line-height: 1.6;
+      letter-spacing: 0.03em;
+      padding: 0 10px;
+    }
+
+    /* Gold line top */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, transparent, #c9a84c 30%, #e8c850 50%, #c9a84c 70%, transparent);
+    }
+
+    /* Particle dots */
+    .dots {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      opacity: 0.15;
+    }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="top-bar"></div>
+
+  <!-- Logo -->
+  <div class="logo-wrap">
+    <div class="logo-ring">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 72" width="36" height="72" style="display:block;">
+        <defs>
+          <linearGradient id="gA" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fff4c0"/>
+            <stop offset="40%" stop-color="#d4a830"/>
+            <stop offset="100%" stop-color="#c0902a"/>
+          </linearGradient>
+          <linearGradient id="gB" x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#e8c850"/>
+            <stop offset="50%" stop-color="#d4b050"/>
+            <stop offset="100%" stop-color="#8a6018"/>
+          </linearGradient>
+          <radialGradient id="gN" cx="32%" cy="28%" r="68%">
+            <stop offset="0%" stop-color="#fff8d0"/>
+            <stop offset="35%" stop-color="#d4a830"/>
+            <stop offset="100%" stop-color="#6a4410"/>
+          </radialGradient>
+          <linearGradient id="gR" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#c8a040" stop-opacity="0.1"/>
+            <stop offset="50%" stop-color="#a07828" stop-opacity="0.6"/>
+            <stop offset="100%" stop-color="#c8a040" stop-opacity="0.1"/>
+          </linearGradient>
+        </defs>
+        <path d="M18 2 C32 8,32 18,18 24 C4 30,4 40,18 46 C32 52,32 62,18 68" fill="none" stroke="url(#gA)" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M18 2 C4 8,4 18,18 24 C32 30,32 40,18 46 C4 52,4 62,18 68" fill="none" stroke="url(#gB)" stroke-width="2.4" stroke-linecap="round"/>
+        <line x1="31" y1="13" x2="5" y2="13" stroke="url(#gR)" stroke-width="1.2"/>
+        <line x1="5" y1="35" x2="31" y2="35" stroke="url(#gR)" stroke-width="1.2"/>
+        <line x1="31" y1="57" x2="5" y2="57" stroke="url(#gR)" stroke-width="1.2"/>
+        <circle cx="31" cy="13" r="3.5" fill="url(#gN)"/>
+        <circle cx="5" cy="13" r="3.5" fill="url(#gN)"/>
+        <circle cx="5" cy="35" r="3.5" fill="url(#gN)"/>
+        <circle cx="31" cy="35" r="3.5" fill="url(#gN)"/>
+        <circle cx="31" cy="57" r="3.5" fill="url(#gN)"/>
+        <circle cx="5" cy="57" r="3.5" fill="url(#gN)"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Name & Title -->
+  <div class="name">Leo Benzer</div>
+  <div class="title">Volunteer Peptide Research Contributor</div>
+  <div class="company">Virelune Labs LLC</div>
+
+  <div class="divider"></div>
+
+  <!-- Action Buttons -->
+  <div class="actions">
+    <a class="btn" href="tel:+17028295881">
+      <div class="btn-icon green">📞</div>
+      <div class="btn-text">
+        <div class="btn-label">Call</div>
+        <div class="btn-value">(702) 829-5881</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </a>
+
+    <a class="btn" href="mailto:leo@virelunelabs.com">
+      <div class="btn-icon gold">✉️</div>
+      <div class="btn-text">
+        <div class="btn-label">Email</div>
+        <div class="btn-value">leo@virelunelabs.com</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </a>
+
+    <a class="btn" href="https://virelunelabs.com" target="_blank">
+      <div class="btn-icon blue">🌐</div>
+      <div class="btn-text">
+        <div class="btn-label">Website</div>
+        <div class="btn-value">virelunelabs.com</div>
+      </div>
+      <div class="btn-arrow">›</div>
+    </a>
+  </div>
+
+  <!-- Save Contact -->
+  <button class="save-btn" onclick="saveContact()">
+    <span>＋</span> Save Contact
+  </button>
+
+  <!-- QR Code -->
+  <div class="qr-section">
+    <div class="qr-label">Scan to visit website</div>
+    <div id="qrcode"></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Legal -->
+  <div class="legal">
+    All products are for research purposes only. Not for human or animal consumption.<br>
+    Not evaluated by the FDA. For licensed researchers only.
+  </div>
+</div>
+
+<script>
+// Generate QR code
+new QRCode(document.getElementById("qrcode"), {
+  text: "https://virelunelabs.com",
+  width: 120,
+  height: 120,
+  colorDark: "#1a1a1a",
+  colorLight: "#ffffff",
+  correctLevel: QRCode.CorrectLevel.M
+});
+
+// Save contact as vCard — iOS-compatible
+function saveContact() {
+  const vcard = [
+    "BEGIN:VCARD",
+    "VERSION:3.0",
+    "FN:Leo Benzer",
+    "N:Benzer;Leo;;;",
+    "ORG:Virelune Labs LLC",
+    "TITLE:Volunteer Peptide Research Contributor",
+    "TEL;TYPE=WORK,VOICE:+17028295881",
+    "EMAIL;TYPE=WORK:leo@virelunelabs.com",
+    "URL:https://virelunelabs.com",
+    "NOTE:Research compounds - not for human consumption.",
+    "END:VCARD"
+  ].join("\r\n");
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+  if (isIOS) {
+    // iOS Safari: navigate to data URI — triggers native "Add to Contacts" sheet
+    window.location.href = "data:text/vcard;charset=utf-8," + encodeURIComponent(vcard);
+  } else {
+    const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Leo_Benzer_Virelune.vcf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+}
+</script>
+</body>
+</html>
