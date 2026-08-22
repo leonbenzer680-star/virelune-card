@@ -1,0 +1,210 @@
+================================================================================
+PERSONAL AI ASSISTANT - DO THIS FIRST
+================================================================================
+
+You don't need to know anything. Just follow these steps exactly.
+
+================================================================================
+OPTION 1: AUTOMATIC SETUP (EASIEST - Click One Button)
+================================================================================
+
+On your Windows laptop, go to: personal-ai folder
+
+Double-click this file:
+  RUN_SETUP.bat
+
+It will:
+  1. Check Python
+  2. Start setup wizard
+  3. Guide you through everything
+  4. Ask for your API keys
+  5. Authenticate everything
+
+Just follow the prompts! The wizard opens websites for you and guides you.
+
+TOTAL TIME: ~15 minutes
+
+================================================================================
+OPTION 2: MANUAL SETUP (If Option 1 doesn't work)
+================================================================================
+
+STEP 1: Get Claude API Key (5 minutes)
+------
+
+1. Open browser
+2. Go to: https://console.anthropic.com/account/keys
+3. Click "Create Key"
+4. Copy your key (looks like: sk-ant-xxxxx)
+5. Open file: personal-ai/.env
+6. Find line: CLAUDE_API_KEY=sk-ant-REPLACE_WITH_YOUR_KEY
+7. Replace REPLACE_WITH_YOUR_KEY with your actual key
+8. Save file
+
+DONE! ✓
+
+
+STEP 2: Get Google OAuth Credentials (10 minutes)
+------
+
+1. Open browser
+2. Go to: https://console.cloud.google.com
+
+A) Create Project:
+   - Click project dropdown (top left)
+   - Click "NEW PROJECT"
+   - Name: "Personal AI"
+   - Click CREATE
+   - Wait for it to load
+   - Select new project from dropdown
+
+B) Enable APIs:
+   - Click hamburger menu (☰ top left)
+   - Click "APIs & Services"
+   - Click "Enable APIs and Services"
+   - Search for each and enable:
+     * Gmail API
+     * Google Drive API
+     * Google Docs API
+     * Google Sheets API
+
+C) Create OAuth Credentials:
+   - Click "Credentials" (left sidebar)
+   - Click "Create Credentials"
+   - Select "OAuth 2.0 Client IDs"
+   - Choose "Desktop Application"
+   - Click "Create"
+   - Click DOWNLOAD icon (right side)
+   - You'll get file: client_secret_XXXXX.json
+   - Rename it to: credentials.json
+   - Move to: personal-ai/config/credentials.json
+
+DONE! ✓
+
+
+STEP 3: Start Server
+------
+
+1. Open terminal/command prompt
+2. Navigate to: personal-ai
+3. Run these commands:
+
+   .\venv\Scripts\Activate.ps1
+   python main.py
+
+You'll see:
+   ✓ Server starting at http://localhost:8000
+
+Leave this running! (Don't close the window)
+
+DONE! ✓
+
+
+STEP 4: Authenticate Services (automatic)
+------
+
+When you use Claude for the first time, it will:
+  - Automatically use your Claude key ✓
+  - Automatically authenticate Gmail on first use ✓
+  - Automatically authenticate Drive on first use ✓
+
+Just ask a question from iPhone Shortcut!
+
+DONE! ✓
+
+================================================================================
+USE IT ON iPHONE
+================================================================================
+
+Once server is running:
+
+1. Install Tailscale on laptop:
+   https://tailscale.com/download/windows
+
+2. Install Tailscale on iPhone:
+   App Store → Search "Tailscale" → Download
+
+3. Sign into SAME account on both
+
+4. Get Tailscale address from laptop's Tailscale app
+   (Should be like: 100.123.45.67)
+
+5. On iPhone, create Shortcut:
+   - Shortcuts app
+   - "+" to create new
+   - Add action: "Ask for Text" (Prompt: "Ask your AI:")
+   - Add action: "Get Contents of URL"
+     URL: http://100.123.45.67:8000/api/ask
+     Method: POST
+     Headers: Content-Type: application/json
+     Body: {"question": "{ask_for_text}"}
+   - Add action: "Speak Text"
+   - Name it: "Ask My AI"
+   - Add to Siri with phrase: "Ask my AI"
+
+6. Test it:
+   Say: "Hey Siri, Ask my AI what's the time?"
+   Should respond!
+
+DONE! ✓
+
+================================================================================
+COMMON QUESTIONS
+================================================================================
+
+Q: "I see an error about Python"
+A: Install Python from python.org
+   Make sure "Add to PATH" is checked
+   Restart your computer
+
+Q: "RUN_SETUP.bat won't open"
+A: Use Option 2 (Manual Setup) instead
+   Copy-paste commands from DO_THIS_FIRST.txt
+
+Q: "I don't have credentials.json file"
+A: Follow STEP 2 above carefully
+   Make sure you downloaded it from Google Cloud Console
+
+Q: "Server won't start"
+A: Make sure virtual environment is activated
+   You should see (venv) before your terminal prompt
+
+Q: "Shortcut doesn't work"
+A: Make sure server is running (python main.py)
+   Make sure Tailscale is connected on both devices
+   Check you used YOUR Tailscale address (not example)
+
+Q: "How much does this cost?"
+A: FREE except Claude API (~$0.50-5/month)
+   Everything else is completely free
+
+================================================================================
+YOU'RE DONE WHEN:
+================================================================================
+
+✓ You ran setup (Option 1 or 2)
+✓ Server is running on your laptop
+✓ You can ask questions from iPhone
+✓ Get responses from Claude
+
+That's it! You have a working personal AI assistant!
+
+================================================================================
+NEED HELP?
+================================================================================
+
+Read these files:
+  - QUICK_START.txt
+  - ACTIVATE_ABC.md
+  - COMPLETE_SETUP.md
+  - HOW_IT_WORKS.md
+
+All in personal-ai folder
+
+================================================================================
+
+START HERE:
+Windows laptop → personal-ai folder → Double-click RUN_SETUP.bat
+
+Then follow the wizard!
+
+🚀
