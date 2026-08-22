@@ -1,0 +1,78 @@
+{
+  "app": {
+    "name": "Personal AI Assistant",
+    "version": "0.1.0",
+    "debug": false
+  },
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "reload": true
+  },
+  "claude": {
+    "enabled": true,
+    "model": "claude-3-5-sonnet-20241022",
+    "max_tokens": 2000
+  },
+  "services": {
+    "gmail": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/gmail.readonly",
+        "https://www.googleapis.com/auth/gmail.labels",
+        "https://www.googleapis.com/auth/gmail.modify"
+      ]
+    },
+    "calendar": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/calendar"
+      ]
+    },
+    "contacts": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/contacts.readonly"
+      ]
+    },
+    "drive": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/drive.readonly"
+      ]
+    },
+    "sheets": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/spreadsheets"
+      ]
+    },
+    "docs": {
+      "enabled": false,
+      "scopes": [
+        "https://www.googleapis.com/auth/documents.readonly"
+      ]
+    },
+    "maps": {
+      "enabled": false
+    },
+    "browser": {
+      "enabled": false,
+      "browser_type": "chromium"
+    },
+    "iphone": {
+      "enabled": false
+    }
+  },
+  "permissions": {
+    "require_confirmation_for_send": true,
+    "require_confirmation_for_delete": true,
+    "require_confirmation_for_modify": true,
+    "log_all_actions": true
+  },
+  "cost": {
+    "monitor_enabled": true,
+    "monthly_budget": 0,
+    "alert_on_paid_api": true
+  }
+}
