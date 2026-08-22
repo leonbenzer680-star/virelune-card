@@ -1,0 +1,179 @@
+================================================================================
+PERSONAL AI ASSISTANT - QUICK START
+================================================================================
+
+GOAL: Make your AI work on laptop AND iPhone (anywhere on cellular)
+
+TIME: 15 minutes total
+
+================================================================================
+LAPTOP SETUP (5 minutes)
+================================================================================
+
+STEP 1: Install everything
+  cd personal-ai
+  powershell -ExecutionPolicy Bypass -File install.ps1
+
+STEP 2: Get Claude API key
+  1. Go to: https://console.anthropic.com
+  2. Click "API Keys" → "Create Key"
+  3. Copy the key
+  4. Open: personal-ai/.env
+  5. Replace: REPLACE_WITH_YOUR_KEY with your actual key
+  6. Save
+
+STEP 3: Start server (KEEP THIS RUNNING!)
+  .\venv\Scripts\Activate.ps1
+  python main.py
+
+You'll see:
+  ✓ Server starting at http://localhost:8000
+
+Leave this window open!
+
+================================================================================
+INSTALL TAILSCALE (Free VPN - makes cellular work)
+================================================================================
+
+STEP 1: Download
+  Windows: https://tailscale.com/download/windows
+  Download and run installer
+
+STEP 2: Connect
+  Click "Connect"
+  Sign in (Google or GitHub)
+  Accept (allows connection)
+
+STEP 3: Get your address
+  Open Tailscale (system tray)
+  Look for line with: 100.x.x.x (like 100.123.45.67)
+  Copy this address
+
+SAVE THIS ADDRESS! You need it for iPhone!
+
+================================================================================
+IPHONE SETUP (5 minutes)
+================================================================================
+
+STEP 1: Install Tailscale
+  1. Open App Store
+  2. Search: "Tailscale"
+  3. Download and install
+  4. Open app
+  5. Tap "Sign in"
+  6. Sign in with SAME account as your laptop
+  7. Tap "Connect"
+
+Done! Your iPhone is now connected to your laptop through a private tunnel.
+
+STEP 2: Create Shortcut
+
+Open SHORTCUTS app on iPhone:
+
+1. Tap "+" (create new)
+2. Tap "Add Action"
+3. Search: "Ask for Text"
+   Prompt: "Ask your AI:"
+4. Add Action: "Get Contents of URL"
+   URL: http://100.123.45.67:8000/api/ask
+   Method: POST
+   Headers: Content-Type: application/json
+   Body (raw): {"question": "{ask_for_text}"}
+5. Add Action: "Speak Text"
+6. Name it: "Ask My AI"
+7. Three dots → "Add to Siri"
+   Say: "Ask my AI"
+
+IMPORTANT: Replace 100.123.45.67 with YOUR Tailscale address!
+
+================================================================================
+TEST IT
+================================================================================
+
+TEST 1: WiFi (at home)
+  Say: "Hey Siri, Ask my AI"
+  Say: "What time is it?"
+  Should respond ✅
+
+TEST 2: Cellular (outside)
+  Turn OFF WiFi on iPhone
+  Say: "Hey Siri, Ask my AI"
+  Say: "Hello"
+  Should still respond ✅
+
+================================================================================
+YOU'RE DONE!
+================================================================================
+
+You now have:
+✅ Personal AI on your laptop
+✅ Works on iPhone at home (WiFi)
+✅ Works on iPhone anywhere (cellular)
+✅ Completely encrypted (Tailscale)
+✅ Completely free (except Claude API)
+✅ Completely private (stays local)
+
+================================================================================
+HOW TO USE
+================================================================================
+
+Say on iPhone:
+  "Hey Siri, Ask my AI [your question]"
+
+Examples:
+  "Hey Siri, Ask my AI what's in my Gmail"
+  "Hey Siri, Ask my AI what do I have today"
+  "Hey Siri, Ask my AI find coffee near me"
+  "Hey Siri, Ask my AI summarize my emails"
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+"Can't connect on cellular"
+  → Make sure Tailscale is running on both laptop and iPhone
+  → Make sure both are signed in to same account
+  → Make sure laptop is on and server is running
+  → Restart Tailscale app on iPhone
+
+"Shortcut not working"
+  → Check you used YOUR Tailscale address (not 100.123.45.67)
+  → Make sure server is running on laptop
+  → Make sure Tailscale is connected
+
+"Server not responding"
+  → Make sure python main.py is still running
+  → Check the terminal window hasn't closed
+
+"Wrong address in Shortcut"
+  → Get your Tailscale address from the Tailscale app
+  → Edit shortcut → Change URL → Replace the IP address
+
+================================================================================
+WHAT'S NEXT
+================================================================================
+
+Once this is working, you can add:
+  1. Gmail integration (read and search emails)
+  2. Calendar integration (see events, create meetings)
+  3. Drive integration (search files)
+  4. Contacts integration (find contact info)
+  5. Maps integration (find nearby places)
+
+Each takes ~15 minutes to set up.
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+✅ Keep laptop ON for this to work
+✅ Keep server (python main.py) running
+✅ Tailscale must be connected on both devices
+✅ This is secure and encrypted
+✅ Your data stays private
+✅ No passwords are stored
+✅ No cloud is used
+
+================================================================================
+
+THAT'S IT! You're done. Enjoy your personal AI! 🚀
