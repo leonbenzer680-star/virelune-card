@@ -29,6 +29,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Import connectors
+sys.path.insert(0, str(Path(__file__).parent))
+from connectors.claude_connector import ClaudeConnector
+from connectors.gmail_connector import GmailConnector
+from connectors.drive_connector import DriveConnector
+
 # Initialize FastAPI
 app = FastAPI(
     title="Personal AI Assistant",
@@ -50,6 +56,24 @@ config_path = Path(__file__).parent / "config" / "settings.json"
 with open(config_path) as f:
     CONFIG = json.load(f)
 
+# Initialize Claude connector
+try:
+    claude = ClaudeConnector()
+    CLAUDE_ENABLED = True
+    logger.info("Claude connector initialized")
+except Exception as e:
+    logger.warning(f"Claude not available: {e}")
+    claude = None
+    CLAUDE_ENABLED = False
+
+# Initialize Gmail connector
+gmail = GmailConnector()
+GMAIL_ENABLED = False
+
+# Initialize Drive connector
+drive = DriveConnector()
+DRIVE_ENABLED = False
+
 logger.info("Starting Personal AI Assistant")
 
 # ============================================================================
@@ -64,6 +88,10 @@ async def root():
 @app.get("/api/status")
 async def status():
     """Get system status"""
+    claude_health = False
+    if claude:
+        claude_health = claude.check_health()
+
     return {
         "status": "running",
         "app": CONFIG["app"],
@@ -74,7 +102,11 @@ async def status():
             "drive": CONFIG["services"]["drive"]["enabled"],
             "sheets": CONFIG["services"]["sheets"]["enabled"],
             "docs": CONFIG["services"]["docs"]["enabled"],
-            "claude": CONFIG["claude"]["enabled"],
+        },
+        "claude": {
+            "enabled": CLAUDE_ENABLED,
+            "healthy": claude_health,
+            "model": "claude-3-5-sonnet-20241022" if CLAUDE_ENABLED else None
         },
         "timestamp": datetime.now().isoformat()
     }
@@ -91,12 +123,31 @@ async def ask(request: Request):
 
         logger.info(f"Received question: {question}")
 
-        # For now, return a placeholder response
-        # In next phase, this will integrate with Claude
+        # Check if Claude is available
+        if not CLAUDE_ENABLED or not claude:
+            logger.warning("Claude not available, returning placeholder response")
+            return {
+                "status": "warning",
+                "question": question,
+                "answer": "Claude API not configured. Add CLAUDE_API_KEY to .env file.",
+                "timestamp": datetime.now().isoformat()
+            }
+
+        # Get response from Claude
+        context = {
+            "services": [
+                service for service, config in CONFIG["services"].items()
+                if config.get("enabled", False)
+            ]
+        }
+
+        claude_response = claude.ask(question, context=context)
+
         response = {
-            "status": "success",
+            "status": claude_response.get("status", "success"),
             "question": question,
-            "answer": "Personal AI Assistant is ready! Connect your services to get started.",
+            "answer": claude_response.get("answer", "No response"),
+            "model": claude_response.get("model", "claude-3-5-sonnet"),
             "timestamp": datetime.now().isoformat()
         }
 
@@ -113,6 +164,124 @@ async def ask(request: Request):
 async def get_config():
     """Get current configuration"""
     return CONFIG
+
+
+@app.post("/api/gmail/auth")
+async def gmail_authenticate():
+    """Authenticate with Gmail"""
+    try:
+        if gmail.authenticate():
+            global GMAIL_ENABLED
+            GMAIL_ENABLED = True
+            logger.info("Gmail authenticated")
+            return {"status": "success", "message": "Gmail authenticated"}
+        else:
+            return {"status": "error", "message": "Gmail authentication failed"}
+    except Exception as e:
+        logger.error(f"Gmail auth error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/gmail/recent")
+async def get_recent_emails():
+    """Get recent emails"""
+    if not GMAIL_ENABLED:
+        return {"status": "error", "message": "Gmail not authenticated"}
+
+    try:
+        emails = gmail.get_recent_emails(max_results=5)
+        return {
+            "status": "success",
+            "emails": emails,
+            "count": len(emails),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting emails: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/gmail/search")
+async def search_emails(q: str = ""):
+    """Search emails"""
+    if not GMAIL_ENABLED:
+        return {"status": "error", "message": "Gmail not authenticated"}
+
+    if not q:
+        return {"status": "error", "message": "Search query required"}
+
+    try:
+        emails = gmail.search_emails(q, max_results=5)
+        return {
+            "status": "success",
+            "query": q,
+            "emails": emails,
+            "count": len(emails),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error searching emails: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.post("/api/drive/auth")
+async def drive_authenticate():
+    """Authenticate with Drive"""
+    try:
+        if GMAIL_ENABLED:
+            # Share Gmail authentication with Drive
+            drive.set_service(gmail.service)
+            global DRIVE_ENABLED
+            DRIVE_ENABLED = True
+            logger.info("Drive authenticated")
+            return {"status": "success", "message": "Drive authenticated"}
+        else:
+            return {"status": "error", "message": "Gmail must be authenticated first"}
+    except Exception as e:
+        logger.error(f"Drive auth error: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/drive/search")
+async def search_drive(q: str = ""):
+    """Search Google Drive"""
+    if not DRIVE_ENABLED:
+        return {"status": "error", "message": "Drive not authenticated"}
+
+    if not q:
+        return {"status": "error", "message": "Search query required"}
+
+    try:
+        files = drive.search_files(q, max_results=10)
+        return {
+            "status": "success",
+            "query": q,
+            "files": files,
+            "count": len(files),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error searching Drive: {e}")
+        return {"status": "error", "message": str(e)}
+
+
+@app.get("/api/drive/recent")
+async def get_recent_files():
+    """Get recent files"""
+    if not DRIVE_ENABLED:
+        return {"status": "error", "message": "Drive not authenticated"}
+
+    try:
+        files = drive.get_recent_files(max_results=10)
+        return {
+            "status": "success",
+            "files": files,
+            "count": len(files),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error getting files: {e}")
+        return {"status": "error", "message": str(e)}
 
 # ============================================================================
 # DASHBOARD HTML
