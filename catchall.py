@@ -247,6 +247,75 @@ def amazon_check_price(asin: str) -> Optional[Dict]:
             return None
 
 
+def amazon_add_to_cart(product_url: str, quantity: int = 1) -> Optional[Dict]:
+    """
+    Add item to cart (stops after clicking 'Add to Cart', does NOT checkout).
+    product_url: Amazon product URL or ASIN (e.g., "https://amazon.com/dp/B000ABC123" or "B000ABC123")
+    quantity: Number of items to add (default: 1)
+    Returns dict with confirmation, or None if failed.
+    """
+    # Extract ASIN from URL if needed
+    if product_url.startswith("http"):
+        asin = product_url.split("/dp/")[-1].split("?")[0]
+    else:
+        asin = product_url
+
+    session = load_amazon_session()
+    if not session:
+        return None
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False)
+        context = browser.new_context(
+            storage_state={"cookies": session["cookies"], "origins": session["storage"].get("origins", [])}
+        )
+        page = context.new_page()
+
+        try:
+            # Navigate to product
+            url = f"https://www.amazon.com/dp/{asin}"
+            print(f"🛒 Opening product: {url}")
+            page.goto(url)
+            page.wait_for_load_state("networkidle")
+
+            # Set quantity if > 1
+            if quantity > 1:
+                qty_selector = page.locator('select[name="quantity"]')
+                if qty_selector.count() > 0:
+                    qty_selector.select_option(str(quantity))
+                    page.wait_for_timeout(500)
+
+            # Click Add to Cart
+            print(f"Adding {quantity} to cart...")
+            add_to_cart_btn = page.locator('input[aria-label*="Add to Cart"]').first
+            add_to_cart_btn.click()
+            page.wait_for_timeout(2000)
+
+            # Verify it's in cart (look for confirmation message or mini-cart update)
+            try:
+                page.locator('text="Added to Cart"').wait_for(timeout=3000)
+                confirmation = True
+            except:
+                confirmation = False
+
+            result = {
+                "asin": asin,
+                "quantity": quantity,
+                "url": url,
+                "added_to_cart": confirmation,
+                "added_at": datetime.now().isoformat(),
+                "status": "✓ Item added to cart" if confirmation else "⚠️ Item may be in cart (check manually)",
+            }
+
+            browser.close()
+            return result
+
+        except Exception as e:
+            print(f"❌ Error adding to cart: {e}")
+            browser.close()
+            return None
+
+
 def amazon_buy_now(asin: str, quantity: int = 1) -> bool:
     """
     Add item to cart and navigate to checkout using saved session.
@@ -342,6 +411,11 @@ Examples:
         help="Check Amazon price (provide ASIN, e.g., B000ABC123)",
     )
     parser.add_argument(
+        "--amazon-add-to-cart",
+        metavar="URL_OR_ASIN",
+        help="Add to cart only (URL or ASIN, e.g., B000ABC123)",
+    )
+    parser.add_argument(
         "--amazon-buy",
         metavar="ASIN",
         help="Add to cart and go to checkout (provide ASIN)",
@@ -379,6 +453,20 @@ Examples:
         except FileNotFoundError as e:
             print(f"   ❌ Error: {e}")
             print("   → Complete Gmail OAuth setup in SETUP.md, Step 1")
+
+    # Amazon add to cart (without checkout)
+    if args.amazon_add_to_cart:
+        try:
+            print(f"🛒 Adding to cart: {args.amazon_add_to_cart} (qty: {args.qty})...")
+            result = amazon_add_to_cart(args.amazon_add_to_cart, quantity=args.qty)
+            if result:
+                print(f"   ✓ {result['status']}")
+                print(f"   ASIN: {result['asin']}")
+                print(f"   Quantity: {result['quantity']}")
+            else:
+                print(f"   ❌ Failed to add to cart")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
 
     # Amazon price check
     elif args.amazon_price:
