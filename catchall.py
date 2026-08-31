@@ -310,28 +310,115 @@ def amazon_buy_now(asin: str, quantity: int = 1) -> bool:
 # ==============================================================================
 
 if __name__ == "__main__":
+    import sys
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Gmail + Amazon Automation Catchall",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python catchall.py --gmail                          # Download all attachments
+  python catchall.py --gmail --query "from:boss@example.com"
+  python catchall.py --amazon-price B000ABC123       # Check price by ASIN
+  python catchall.py --amazon-buy B000ABC123 --qty 2 # Add to cart + checkout
+  python catchall.py --amazon-login                   # One-time login setup
+        """,
+    )
+
+    parser.add_argument(
+        "--gmail",
+        action="store_true",
+        help="Download Gmail attachments",
+    )
+    parser.add_argument(
+        "--query",
+        default="has:attachment",
+        help="Gmail search query (default: has:attachment)",
+    )
+    parser.add_argument(
+        "--amazon-price",
+        metavar="ASIN",
+        help="Check Amazon price (provide ASIN, e.g., B000ABC123)",
+    )
+    parser.add_argument(
+        "--amazon-buy",
+        metavar="ASIN",
+        help="Add to cart and go to checkout (provide ASIN)",
+    )
+    parser.add_argument(
+        "--qty",
+        type=int,
+        default=1,
+        help="Quantity for purchase (default: 1)",
+    )
+    parser.add_argument(
+        "--amazon-login",
+        action="store_true",
+        help="One-time Amazon login setup",
+    )
+
+    args = parser.parse_args()
+
     print("=" * 70)
     print("VIRELUNE CATCHALL — Gmail + Amazon Automation")
     print("=" * 70)
     print(f"Config directory: {CONFIG_DIR}\n")
 
-    # Example: Download attachments
-    print("📧 Downloading Gmail attachments...")
-    attachments = download_gmail_attachment(query="has:attachment")
-    print(f"   Found {len(attachments)} attachments\n")
+    # Gmail attachment download
+    if args.gmail:
+        try:
+            print(f"📧 Downloading Gmail attachments (query: '{args.query}')...")
+            attachments = download_gmail_attachment(query=args.query)
+            if attachments:
+                print(f"   ✓ Found {len(attachments)} attachment(s)")
+                for att in attachments:
+                    print(f"     • {att['filename']} from {att['sender']}")
+            else:
+                print("   ℹ️  No attachments found")
+        except FileNotFoundError as e:
+            print(f"   ❌ Error: {e}")
+            print("   → Complete Gmail OAuth setup in SETUP.md, Step 1")
 
-    # Example: Amazon price check
-    # ASIN is the Amazon product ID (in URL: amazon.com/dp/B000ABC123)
-    test_asin = "B000ABC123"  # Replace with real ASIN
-    print(f"💰 Checking Amazon price for ASIN {test_asin}...")
-    # price_info = amazon_check_price(test_asin)
-    # if price_info:
-    #     print(f"   {price_info['title']}")
-    #     print(f"   Price: {price_info['price']}")
+    # Amazon price check
+    elif args.amazon_price:
+        try:
+            print(f"💰 Checking Amazon price for ASIN: {args.amazon_price}...")
+            price_info = amazon_check_price(args.amazon_price)
+            if price_info:
+                print(f"   ✓ {price_info['title']}")
+                print(f"   Price: {price_info['price']}")
+                print(f"   URL: {price_info['url']}")
+            else:
+                print("   ❌ Could not fetch price (session may have expired)")
+                print("   → Run: python catchall.py --amazon-login")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
 
-    print("\n✓ Setup complete!")
-    print("\nTo use in your code:")
-    print("  from catchall import download_gmail_attachment, amazon_check_price, amazon_buy_now")
-    print("  attachments = download_gmail_attachment(query='from:boss@example.com')")
-    print("  price = amazon_check_price('B000ABC123')")
-    print("  amazon_buy_now('B000ABC123', quantity=2)")
+    # Amazon checkout flow
+    elif args.amazon_buy:
+        try:
+            print(f"🛒 Adding {args.amazon_buy} (qty: {args.qty}) to cart...")
+            success = amazon_buy_now(args.amazon_buy, quantity=args.qty)
+            if success:
+                print(f"   ✓ Checkout flow opened. Complete payment manually.")
+            else:
+                print(f"   ❌ Checkout failed")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+
+    # One-time Amazon login
+    elif args.amazon_login:
+        try:
+            print("🔐 Starting Amazon login...")
+            amazon_login_once()
+            print("   ✓ Amazon session saved!")
+        except Exception as e:
+            print(f"   ❌ Error: {e}")
+
+    # No args provided - show help
+    else:
+        parser.print_help()
+        print("\n" + "=" * 70)
+        print("✓ Catchall loaded! Choose an option above to get started.")
+        print("=" * 70)
