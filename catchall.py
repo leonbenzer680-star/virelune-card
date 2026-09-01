@@ -249,7 +249,7 @@ def amazon_check_price(asin: str) -> Optional[Dict]:
 
 def amazon_add_to_cart(product_url: str, quantity: int = 1) -> Optional[Dict]:
     """
-    Add item to cart (stops after clicking 'Add to Cart', does NOT checkout).
+    Add item to cart with VERBOSE DEBUGGING (stops after clicking 'Add to Cart', does NOT checkout).
     product_url: Amazon product URL or ASIN (e.g., "https://amazon.com/dp/B000ABC123" or "B000ABC123")
     quantity: Number of items to add (default: 1)
     Returns dict with confirmation, or None if failed.
@@ -262,58 +262,147 @@ def amazon_add_to_cart(product_url: str, quantity: int = 1) -> Optional[Dict]:
 
     session = load_amazon_session()
     if not session:
+        print("❌ No Amazon session found. Run amazon_login_once() first.")
         return None
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)
+        browser = p.chromium.launch(headless=False)  # ← VISIBLE BROWSER
         context = browser.new_context(
             storage_state={"cookies": session["cookies"], "origins": session["storage"].get("origins", [])}
         )
         page = context.new_page()
 
         try:
-            # Navigate to product
+            # ========== STEP 1: Navigate to product ==========
             url = f"https://www.amazon.com/dp/{asin}"
-            print(f"🛒 Opening product: {url}")
+            print(f"\n🛒 STEP 1: Opening product URL: {url}")
             page.goto(url)
             page.wait_for_load_state("networkidle")
+            page.wait_for_timeout(1000)  # Extra wait for JS to render
 
-            # Set quantity if > 1
+            # Capture page title and URL
+            page_title = page.title()
+            current_url = page.url()
+            print(f"   Page title: {page_title}")
+            print(f"   Current URL: {current_url}")
+
+            # ========== STEP 2: Check for CAPTCHA / bot detection ==========
+            print(f"\n🛒 STEP 2: Checking for CAPTCHA or bot-detection...")
+            captcha_indicators = [
+                page.locator('text="Unusual activity"').count() > 0,
+                page.locator('text="Prove you\'re not a bot"').count() > 0,
+                page.locator('iframe[title*="reCAPTCHA"]').count() > 0,
+                "account-confirmation" in current_url,
+                "ap.amazon.com" in current_url,
+            ]
+            if any(captcha_indicators):
+                print("   ⚠️  CAPTCHA/bot-detection page detected!")
+                print("   → Manually complete the CAPTCHA in the browser window and try again")
+                browser.close()
+                return {"asin": asin, "status": "CAPTCHA_REQUIRED", "added_to_cart": False}
+            print("   ✓ No CAPTCHA detected")
+
+            # ========== STEP 3: Verify account/session ==========
+            print(f"\n🛒 STEP 3: Verifying logged-in account...")
+            try:
+                # Look for account name in nav
+                account_name = page.locator('span[role="img"]').first.get_attribute("aria-label")
+                if not account_name:
+                    account_name = page.locator('a#nav-link-accountList').text_content()
+                if account_name:
+                    print(f"   ✓ Logged in as: {account_name}")
+                else:
+                    print(f"   ⚠️  Could not determine account name")
+            except Exception as e:
+                print(f"   ⚠️  Could not verify account: {e}")
+
+            # ========== STEP 4: Set quantity if > 1 ==========
             if quantity > 1:
-                qty_selector = page.locator('select[name="quantity"]')
-                if qty_selector.count() > 0:
-                    qty_selector.select_option(str(quantity))
-                    page.wait_for_timeout(500)
+                print(f"\n🛒 STEP 4: Setting quantity to {quantity}...")
+                qty_selectors = [
+                    'select[name="quantity"]',
+                    'select#quantity',
+                    'div[data-feature-name="quantity"] select',
+                ]
+                qty_found = False
+                for selector in qty_selectors:
+                    if page.locator(selector).count() > 0:
+                        print(f"   Found quantity selector: {selector}")
+                        page.locator(selector).select_option(str(quantity))
+                        page.wait_for_timeout(500)
+                        qty_found = True
+                        break
+                if not qty_found:
+                    print(f"   ⚠️  No quantity selector found (may not exist for this product)")
 
-            # Click Add to Cart
-            print(f"Adding {quantity} to cart...")
-            add_to_cart_btn = page.locator('input[aria-label*="Add to Cart"]').first
-            add_to_cart_btn.click()
-            page.wait_for_timeout(2000)
+            # ========== STEP 5: Find and click Add to Cart button ==========
+            print(f"\n🛒 STEP 5: Finding 'Add to Cart' button...")
 
-            # Verify it's in cart (look for confirmation message or mini-cart update)
+            # Try multiple selectors (Amazon changes these frequently)
+            button_selectors = [
+                'input[name="submit.add-to-cart"]',
+                'input[aria-label*="Add to Cart"]',
+                'button[id*="add-to-cart"]',
+                'button[aria-label*="Add to Cart"]',
+                'input[value*="Add to Cart"]',
+                'a[href*="gp/aws/cart/add"]',
+            ]
+
+            button_found = False
+            for selector in button_selectors:
+                button_count = page.locator(selector).count()
+                if button_count > 0:
+                    print(f"   ✓ Found button with selector: {selector}")
+                    print(f"   Button text/label: {page.locator(selector).first.get_attribute('aria-label') or page.locator(selector).first.text_content()}")
+                    page.locator(selector).first.click()
+                    button_found = True
+                    page.wait_for_timeout(2000)
+                    break
+
+            if not button_found:
+                print(f"   ❌ No 'Add to Cart' button found!")
+                print(f"   Available buttons on page: {page.locator('button').count()}")
+                print(f"   Available inputs on page: {page.locator('input').count()}")
+                browser.close()
+                return {"asin": asin, "status": "BUTTON_NOT_FOUND", "added_to_cart": False}
+
+            # ========== STEP 6: Wait for confirmation ==========
+            print(f"\n🛒 STEP 6: Waiting for confirmation...")
+            confirmation = False
             try:
                 page.locator('text="Added to Cart"').wait_for(timeout=3000)
+                print(f"   ✓ 'Added to Cart' message detected")
                 confirmation = True
             except:
-                confirmation = False
+                print(f"   ⚠️  No 'Added to Cart' message (checking mini-cart instead...)")
+                try:
+                    # Check if cart count updated
+                    cart_count = page.locator('span#nav-cart-count').text_content()
+                    print(f"   Cart count: {cart_count}")
+                except:
+                    pass
 
+            # ========== RESULT ==========
             result = {
                 "asin": asin,
                 "quantity": quantity,
                 "url": url,
                 "added_to_cart": confirmation,
                 "added_at": datetime.now().isoformat(),
-                "status": "✓ Item added to cart" if confirmation else "⚠️ Item may be in cart (check manually)",
+                "button_found": button_found,
+                "status": "✓ Item added to cart" if confirmation else "⚠️ Button clicked (check cart manually)",
             }
 
+            print(f"\n✅ RESULT: {result['status']}\n")
             browser.close()
             return result
 
         except Exception as e:
-            print(f"❌ Error adding to cart: {e}")
+            print(f"\n❌ ERROR: {e}")
+            import traceback
+            traceback.print_exc()
             browser.close()
-            return None
+            return {"asin": asin, "status": f"ERROR: {str(e)}", "added_to_cart": False}
 
 
 def amazon_buy_now(asin: str, quantity: int = 1) -> bool:
