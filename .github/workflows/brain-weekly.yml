@@ -1,0 +1,56 @@
+name: Weekly Brain Review
+
+on:
+  schedule:
+    # Saturday 8:00 AM Pacific (15:00 UTC)
+    - cron: "0 15 * * SAT"
+  workflow_dispatch: {}
+
+jobs:
+  run-weekly:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Create .env from secrets
+        run: |
+          cat <<EOF > .env
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          SMTP_HOST=smtp.gmail.com
+          SMTP_PORT=587
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASS=${{ secrets.SMTP_PASS }}
+          SMTP_TO=${{ secrets.SMTP_TO }}
+
+          PRIMARY_CALENDAR_ICAL=${{ secrets.PRIMARY_CALENDAR_ICAL }}
+          SECONDARY_CALENDAR_ICAL=${{ secrets.SECONDARY_CALENDAR_ICAL }}
+
+          OPENWEATHER_API_KEY=${{ secrets.OPENWEATHER_API_KEY }}
+          OPENWEATHER_CITY=Las Vegas
+          OPENWEATHER_COUNTRY=US
+
+          LOCAL_TZ=America/Los_Angeles
+
+          VAULT_ROOT=./vault
+          NOTION_EXPORT_DIR=./vault/notion
+          YOUTUBE_LOG=./vault/logs/youtube.csv
+          BOOK_LOG=./vault/logs/books.csv
+          SEARCH_LOG=./vault/logs/searches.csv
+          TASK_LOG=./vault/logs/tasks.csv
+
+          MODE=weekly
+          EOF
+
+      - name: Run weekly review
+        run: python brain.py
